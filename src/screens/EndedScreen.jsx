@@ -1,4 +1,6 @@
-export default function EndedScreen({ winner, myRole, myNumber, myGuessCount, onBackToLobby }) {
+import Chat from '../components/Chat'
+
+export default function EndedScreen({ roomId, winner, myRole, myNumber, myGuessCount, onBackToRoom, onLeave }) {
   const won = winner === myRole
 
   return (
@@ -13,11 +15,16 @@ export default function EndedScreen({ winner, myRole, myNumber, myGuessCount, on
               : `상대방이 먼저 맞혔습니다.\n내 숫자는 ${myNumber}이었습니다.`
             }
           </p>
-          <button className="btn btn-primary" onClick={onBackToLobby}>
-            로비로 돌아가기
+          <button className="btn btn-primary" onClick={onBackToRoom}>
+            다시 하기
+          </button>
+          <button className="btn btn-ghost" onClick={onLeave}>
+            로비로 나가기
           </button>
         </div>
       </div>
+
+      <Chat roomId={roomId} myRole={myRole} />
     </div>
   )
 }

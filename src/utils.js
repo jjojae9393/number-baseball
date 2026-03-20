@@ -10,7 +10,6 @@ export function calcResult(secret, guess) {
 export function validateNum(s) {
   if (!/^\d{3}$/.test(s)) return '3자리 숫자를 입력해주세요'
   if (s[0] === '0') return '첫 자리는 0이 될 수 없습니다'
-  if (new Set(s).size !== 3) return '중복된 숫자는 사용할 수 없습니다'
   return null
 }
 

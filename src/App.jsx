@@ -1,4 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
+import { db } from './firebase'
+import { ref, update, remove } from 'firebase/database'
 import LobbyScreen from './screens/LobbyScreen'
 import RoomScreen from './screens/RoomScreen'
 import PlayingScreen from './screens/PlayingScreen'
@@ -43,6 +45,24 @@ export default function App() {
     setScreen('lobby')
   }, [])
 
+  const backToRoom = useCallback(async () => {
+    if (!roomId) return
+    // Reset game state in Firebase, keep players and chat
+    await update(ref(db, `rooms/${roomId}`), {
+      status: 'waiting',
+      turn: 'p1',
+      winner: null,
+    })
+    await update(ref(db, `rooms/${roomId}/p1`), { ready: false })
+    await update(ref(db, `rooms/${roomId}/p2`), { ready: false })
+    await remove(ref(db, `rooms/${roomId}/guesses`))
+
+    setMyNumber('')
+    setWinner(null)
+    setMyGuessCount(0)
+    setScreen('room')
+  }, [roomId])
+
   return (
     <>
       <div className="header">
@@ -77,11 +97,13 @@ export default function App() {
 
       {screen === 'ended' && (
         <EndedScreen
+          roomId={roomId}
           winner={winner}
           myRole={myRole}
           myNumber={myNumber}
           myGuessCount={myGuessCount}
-          onBackToLobby={backToLobby}
+          onBackToRoom={backToRoom}
+          onLeave={backToLobby}
         />
       )}
     </>

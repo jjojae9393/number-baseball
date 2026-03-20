@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { db } from '../firebase'
-import { ref, set, update, remove, onValue } from 'firebase/database'
+import { ref, set, update, remove, onValue, get } from 'firebase/database'
 import { validateNum } from '../utils'
 import Chat from '../components/Chat'
 
 export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLeave }) {
   const [myReady, setMyReady] = useState(false)
-  const [oppStatus, setOppStatus] = useState('absent') // 'absent' | 'waiting' | 'ready'
+  const [oppStatus, setOppStatus] = useState('absent')
   const [numInput, setNumInput] = useState('')
   const [error, setError] = useState('')
   const numInputRef = useRef(null)
@@ -14,6 +14,10 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
 
   useEffect(() => {
     gameStartedRef.current = false
+    setMyReady(false)
+    setNumInput('')
+    setError('')
+
     const roomRef = ref(db, `rooms/${roomId}`)
 
     const unsub = onValue(roomRef, (snap) => {
@@ -35,6 +39,12 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
         setOppStatus('ready')
       } else {
         setOppStatus('waiting')
+      }
+
+      // Reset my ready state if room was reset (e.g. after game end)
+      const myData = room[myRole]
+      if (myData && !myData.ready) {
+        setMyReady(false)
       }
 
       // Both ready → start game
@@ -60,12 +70,21 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
   }
 
   const handleLeave = async () => {
-    if (myRole === 'p1') {
-      await update(ref(db, `rooms/${roomId}`), { status: 'ended' })
+    // Remove my player data
+    await remove(ref(db, `rooms/${roomId}/${myRole}`))
+
+    // Check if the other player is still in the room
+    const oppRole = myRole === 'p1' ? 'p2' : 'p1'
+    const oppSnap = await get(ref(db, `rooms/${roomId}/${oppRole}`))
+
+    if (!oppSnap.exists()) {
+      // Both players gone → delete room
+      await remove(ref(db, `rooms/${roomId}`))
     } else {
-      await remove(ref(db, `rooms/${roomId}/p2`))
+      // Other player still here → set status to waiting
       await set(ref(db, `rooms/${roomId}/status`), 'waiting')
     }
+
     onLeave()
   }
 
@@ -80,7 +99,6 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
       </div>
 
       <div className="card">
-        {/* Player slots */}
         <div className="player-slots">
           <div className="player-slot me">
             <div className="slot-label">나</div>
@@ -98,7 +116,6 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
 
         <div className="divider" />
 
-        {/* Number input + ready */}
         {!myReady ? (
           <div>
             <p style={{ fontSize: '0.82rem', color: 'var(--muted)', marginBottom: 10 }}>
@@ -117,7 +134,7 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
               onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleReady()}
             />
             {error && <div className="err">{error}</div>}
-            <p className="hint">3자리 · 첫 자리 0 불가 · 중복 없음</p>
+            <p className="hint">3자리 · 첫 자리 0 불가 · 중복 허용</p>
             <button className="btn btn-success" style={{ marginTop: 12 }} onClick={handleReady}>
               준비 완료
             </button>

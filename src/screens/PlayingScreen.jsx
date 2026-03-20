@@ -13,7 +13,6 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
   const [oppGuesses, setOppGuesses] = useState([])
   const [guessInput, setGuessInput] = useState('')
   const [guessError, setGuessError] = useState(false)
-  const [activeTab, setActiveTab] = useState('my')
   const [gameOver, setGameOver] = useState(false)
   const [timer, setTimer] = useState(TURN_TIME)
 
@@ -48,7 +47,6 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       setTimer(prev => {
         if (prev <= 1) {
           clearInterval(timerRef.current)
-          // Time's up - skip turn if it's mine and not waiting for result
           if (isMyTurn && !waitingResultRef.current && !gameOverRef.current) {
             set(ref(db, `rooms/${roomId}/turn`), opp)
           }
@@ -64,7 +62,6 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
   useEffect(() => {
     const unsubs = []
 
-    // Turn listener
     const turnRef = ref(db, `rooms/${roomId}/turn`)
     unsubs.push(onValue(turnRef, (snap) => {
       const t = snap.val()
@@ -78,7 +75,6 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       }
     }))
 
-    // Winner listener
     const winnerRef = ref(db, `rooms/${roomId}/winner`)
     unsubs.push(onValue(winnerRef, (snap) => {
       const w = snap.val()
@@ -89,7 +85,6 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       }
     }))
 
-    // My guesses - child_added
     const myGuessRef = ref(db, `rooms/${roomId}/guesses/${myRole}`)
     unsubs.push(onChildAdded(myGuessRef, (snap) => {
       const g = snap.val()
@@ -101,7 +96,6 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       }
     }))
 
-    // My guesses - child_changed (result filled in by opponent)
     unsubs.push(onChildChanged(myGuessRef, (snap) => {
       const g = snap.val()
       const idx = myGuessesRef.current.findIndex(e => e.key === snap.key)
@@ -115,18 +109,15 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       myGuessesRef.current = [...myGuessesRef.current]
       setMyGuesses([...myGuessesRef.current])
 
-      // Result arrived → check win or pass turn to opponent
       if (g.strike != null) {
         if (g.strike === 3) {
           set(ref(db, `rooms/${roomId}/winner`), myRole)
         } else {
-          // Pass turn to opponent
           set(ref(db, `rooms/${roomId}/turn`), opp)
         }
       }
     }))
 
-    // Opponent guesses - I calculate the result
     const oppGuessRef = ref(db, `rooms/${roomId}/guesses/${opp}`)
     unsubs.push(onChildAdded(oppGuessRef, (snap) => {
       const g = snap.val()
@@ -172,7 +163,6 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
     setWaitingResult(true)
     waitingResultRef.current = true
 
-    // Push guess — don't switch turn yet, wait for result
     push(ref(db, `rooms/${roomId}/guesses/${myRole}`), {
       guess: val,
       strike: null,
@@ -180,35 +170,28 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
     })
   }
 
-  const renderGuessRow = (g) => {
-    const isWin = !g.pending && g.strike === 3
-    let result
+  const renderResult = (g) => {
     if (g.pending || g.strike == null) {
-      result = <span className="g-pending">계산 중...</span>
+      return <span className="g-pending">...</span>
     } else if (g.strike === 0 && g.ball === 0) {
-      result = <span className="g-out">아웃</span>
+      return <span className="g-out">OUT</span>
     } else {
-      result = (
+      return (
         <>
           {g.strike > 0 && <span className="g-s">{g.strike}S</span>}
           {g.ball > 0 && <span className="g-b">{g.ball}B</span>}
         </>
       )
     }
-
-    return (
-      <div key={g.key} className={`guess-row${isWin ? ' win' : ''}`}>
-        <span className="g-num">{g.guess}</span>
-        <span className="g-result">{result}</span>
-      </div>
-    )
   }
 
+  const maxRows = Math.max(myGuesses.length, oppGuesses.length, 1)
   const timerWarning = timer <= 10
   const canInput = isMyTurn && !waitingResult && !gameOver
 
   return (
     <div className="screen">
+      {/* Status bar */}
       <div className="game-bar">
         <div className={`turn-badge ${isMyTurn ? 'mine' : 'theirs'}`}>
           {waitingResult ? '결과 대기중...' : isMyTurn ? '내 차례' : '상대방 차례'}
@@ -221,66 +204,75 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
         </div>
       </div>
 
-      <div className="tabs">
-        <button
-          className={`tab ${activeTab === 'my' ? 'active' : ''}`}
-          onClick={() => setActiveTab('my')}
-        >
-          내 추측
-        </button>
-        <button
-          className={`tab ${activeTab === 'opp' ? 'active' : ''}`}
-          onClick={() => setActiveTab('opp')}
-        >
-          상대방 추측
-        </button>
+      {/* Scoreboard */}
+      <div className="card scoreboard">
+        <div className="sb-header">
+          <div className="sb-col-header sb-me">나</div>
+          <div className="sb-col-header sb-round">#</div>
+          <div className="sb-col-header sb-opp">상대</div>
+        </div>
+        <div className="sb-body" ref={myGuessListRef}>
+          {maxRows === 0 ? (
+            <div className="empty-hint" style={{ gridColumn: '1 / -1' }}>게임 시작!</div>
+          ) : (
+            Array.from({ length: maxRows }).map((_, i) => {
+              const my = myGuesses[i]
+              const op = oppGuesses[i]
+              return (
+                <div key={i} className="sb-row">
+                  <div className={`sb-cell sb-left ${my?.strike === 3 ? 'win' : ''}`}>
+                    {my ? (
+                      <>
+                        <span className="sb-num">{my.guess}</span>
+                        <span className="sb-result">{renderResult(my)}</span>
+                      </>
+                    ) : (
+                      <span className="sb-empty">-</span>
+                    )}
+                  </div>
+                  <div className="sb-round-num">{i + 1}</div>
+                  <div className={`sb-cell sb-right ${op?.strike === 3 ? 'win' : ''}`}>
+                    {op ? (
+                      <>
+                        <span className="sb-result">{renderResult(op)}</span>
+                        <span className="sb-num">{op.guess}</span>
+                      </>
+                    ) : (
+                      <span className="sb-empty">-</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
       </div>
 
-      {activeTab === 'my' && (
-        <div className="card">
-          <div className="guess-list" ref={myGuessListRef}>
-            {myGuesses.length === 0 ? (
-              <div className="empty-hint">아직 추측하지 않았습니다</div>
-            ) : (
-              myGuesses.map(renderGuessRow)
-            )}
-          </div>
-          <div className="guess-input-row">
-            <input
-              ref={guessInputRef}
-              className={`input${guessError ? ' error' : ''}`}
-              type="text"
-              placeholder="???"
-              maxLength={3}
-              inputMode="numeric"
-              autoComplete="off"
-              value={guessInput}
-              onChange={(e) => setGuessInput(e.target.value.replace(/\D/g, ''))}
-              onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && doGuess()}
-              disabled={!canInput}
-            />
-            <button
-              className="btn btn-primary"
-              onClick={doGuess}
-              disabled={!canInput}
-            >
-              추측
-            </button>
-          </div>
+      {/* Guess input */}
+      <div className="card">
+        <div className="guess-input-row">
+          <input
+            ref={guessInputRef}
+            className={`input${guessError ? ' error' : ''}`}
+            type="text"
+            placeholder="???"
+            maxLength={3}
+            inputMode="numeric"
+            autoComplete="off"
+            value={guessInput}
+            onChange={(e) => setGuessInput(e.target.value.replace(/\D/g, ''))}
+            onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && doGuess()}
+            disabled={!canInput}
+          />
+          <button
+            className="btn btn-primary"
+            onClick={doGuess}
+            disabled={!canInput}
+          >
+            추측
+          </button>
         </div>
-      )}
-
-      {activeTab === 'opp' && (
-        <div className="card">
-          <div className="guess-list" ref={oppGuessListRef}>
-            {oppGuesses.length === 0 ? (
-              <div className="empty-hint">상대방이 아직 추측하지 않았습니다</div>
-            ) : (
-              oppGuesses.map(renderGuessRow)
-            )}
-          </div>
-        </div>
-      )}
+      </div>
 
       <Chat roomId={roomId} myRole={myRole} />
     </div>

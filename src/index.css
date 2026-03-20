@@ -237,17 +237,47 @@ body {
 .my-num-chip { font-size: 0.75rem; color: var(--muted); }
 .my-num-chip span { color: var(--text); font-weight: 800; letter-spacing: 0.15rem; }
 
-/* Tabs */
-.tabs { display: flex; background: var(--bg); border-radius: 10px; padding: 3px; gap: 3px; }
-.tab {
-  flex: 1; text-align: center; padding: 7px;
-  font-size: 0.8rem; font-weight: 600; border-radius: 7px;
-  cursor: pointer; color: var(--muted); transition: all 0.15s;
-  background: none; border: none;
+/* Scoreboard */
+.scoreboard { padding: 0; overflow: hidden; }
+.sb-header {
+  display: grid; grid-template-columns: 1fr 36px 1fr;
+  background: var(--surface2); font-size: 0.75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
 }
-.tab.active { background: var(--surface2); color: var(--text); }
+.sb-col-header { padding: 10px 12px; text-align: center; }
+.sb-me { color: var(--primary); }
+.sb-opp { color: var(--warning); }
+.sb-col-header.sb-round { padding: 10px 4px; }
+.sb-body {
+  max-height: 280px; overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.sb-body::-webkit-scrollbar { width: 4px; }
+.sb-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.sb-row {
+  display: grid; grid-template-columns: 1fr 36px 1fr;
+  border-top: 1px solid var(--border);
+  min-height: 40px;
+}
+.sb-round-num {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 700; color: var(--muted);
+  background: rgba(148,163,184,0.04);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+.sb-cell {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 12px; font-size: 0.85rem;
+}
+.sb-left { justify-content: space-between; }
+.sb-right { justify-content: space-between; }
+.sb-cell.win { background: rgba(34,197,94,0.07); }
+.sb-num { font-size: 1.1rem; font-weight: 800; letter-spacing: 0.12rem; }
+.sb-result { display: flex; gap: 6px; font-size: 0.8rem; font-weight: 700; }
+.sb-empty { color: var(--muted); font-size: 0.8rem; width: 100%; text-align: center; }
 
-/* Guess list */
+/* Guess list (kept for compatibility) */
 .guess-list { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .guess-list::-webkit-scrollbar { width: 4px; }
 .guess-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }

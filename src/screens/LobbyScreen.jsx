@@ -19,7 +19,7 @@ export default function LobbyScreen({ onJoinRoom }) {
       const cutoff = Date.now() - 2 * 60 * 60 * 1000
 
       const list = Object.entries(data)
-        .filter(([, r]) => r.createdAt > cutoff && r.status !== 'ended')
+        .filter(([, r]) => r.createdAt > cutoff && r.status !== 'ended' && !r.p2 && r.status !== 'playing')
         .sort((a, b) => b[1].createdAt - a[1].createdAt)
 
       setRooms(list)
@@ -109,31 +109,19 @@ export default function LobbyScreen({ onJoinRoom }) {
           </div>
         ) : (
           <div className="room-list-wrap">
-            {rooms.map(([id, room]) => {
-              const p2Exists = !!room.p2
-              const isPlaying = room.status === 'playing'
-              const canJoin = !p2Exists && !isPlaying
-
-              return (
-                <div
-                  key={id}
-                  className={`room-item ${canJoin ? '' : 'full'}`}
-                  onClick={() => canJoin && joinRoom(id)}
-                >
-                  <div className="room-item-name">{room.name}</div>
-                  <div className="room-meta">
-                    <span className="room-count">{p2Exists ? '2' : '1'}/2명</span>
-                    {isPlaying ? (
-                      <span className="room-badge ing">진행중</span>
-                    ) : p2Exists ? (
-                      <span className="room-badge full">준비중</span>
-                    ) : (
-                      <span className="room-badge open">입장 가능</span>
-                    )}
-                  </div>
+            {rooms.map(([id, room]) => (
+              <div
+                key={id}
+                className="room-item"
+                onClick={() => joinRoom(id)}
+              >
+                <div className="room-item-name">{room.name}</div>
+                <div className="room-meta">
+                  <span className="room-count">1/2명</span>
+                  <span className="room-badge open">입장 가능</span>
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>

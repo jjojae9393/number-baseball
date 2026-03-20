@@ -254,13 +254,27 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
           <input
             ref={guessInputRef}
             className={`input${guessError ? ' error' : ''}`}
-            type="tel"
+            type="text"
             placeholder="???"
-            maxLength={3}
             autoComplete="off"
+            readOnly
             value={guessInput}
-            onChange={(e) => setGuessInput(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
-            onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && doGuess()}
+            onKeyDown={(e) => {
+              if (!canInput) return
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                doGuess()
+                return
+              }
+              if (e.key === 'Backspace') {
+                e.preventDefault()
+                setGuessInput(prev => prev.slice(0, -1))
+                return
+              }
+              if (/^[0-9]$/.test(e.key)) {
+                e.preventDefault()
+                setGuessInput(prev => (prev.length < 3 ? prev + e.key : prev))
+              }
+            }}
             disabled={!canInput}
           />
           <button

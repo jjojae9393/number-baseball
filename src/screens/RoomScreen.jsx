@@ -88,9 +88,20 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
     onLeave()
   }
 
-  const handleNumChange = (e) => {
-    const val = e.target.value.replace(/[^0-9]/g, '')
-    setNumInput(val.slice(0, 3))
+  const handleNumKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+      handleReady()
+      return
+    }
+    if (e.key === 'Backspace') {
+      e.preventDefault()
+      setNumInput(prev => prev.slice(0, -1))
+      return
+    }
+    if (/^[0-9]$/.test(e.key)) {
+      e.preventDefault()
+      setNumInput(prev => (prev.length < 3 ? prev + e.key : prev))
+    }
   }
 
   return (
@@ -125,13 +136,12 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
             <input
               ref={numInputRef}
               className="input input-mono"
-              type="tel"
+              type="text"
               placeholder="000"
-              maxLength={3}
               autoComplete="off"
+              readOnly
               value={numInput}
-              onChange={handleNumChange}
-              onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleReady()}
+              onKeyDown={handleNumKeyDown}
             />
             {error && <div className="err">{error}</div>}
             <p className="hint">3자리 · 첫 자리 0 불가 · 중복 허용</p>

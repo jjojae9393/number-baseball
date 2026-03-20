@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { db } from '../firebase'
 import { ref, set, update, remove, onValue } from 'firebase/database'
 import { validateNum } from '../utils'
+import Chat from '../components/Chat'
 
 export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLeave }) {
   const [myReady, setMyReady] = useState(false)
@@ -113,7 +114,7 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
               autoComplete="off"
               value={numInput}
               onChange={handleNumChange}
-              onKeyDown={(e) => e.key === 'Enter' && handleReady()}
+              onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && handleReady()}
             />
             {error && <div className="err">{error}</div>}
             <p className="hint">3자리 · 첫 자리 0 불가 · 중복 없음</p>
@@ -127,6 +128,8 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
           </div>
         )}
       </div>
+
+      <Chat roomId={roomId} myRole={myRole} />
 
       <button className="btn btn-danger" onClick={handleLeave}>방 나가기</button>
     </div>

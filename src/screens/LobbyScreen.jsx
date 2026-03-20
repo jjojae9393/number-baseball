@@ -84,7 +84,7 @@ export default function LobbyScreen({ onJoinRoom }) {
                 maxLength={20}
                 value={newRoomName}
                 onChange={(e) => setNewRoomName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && createRoom()}
+                onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && createRoom()}
               />
               <button className="btn btn-success btn-sm" onClick={createRoom}>만들기</button>
             </div>

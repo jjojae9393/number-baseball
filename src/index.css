@@ -206,6 +206,23 @@ body {
 .slot-status.absent { background: rgba(148,163,184,0.08); color: var(--muted); }
 .divider { height: 1px; background: var(--border); margin: 14px 0; }
 
+/* Timer */
+.timer {
+  font-size: 1.1rem; font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 4px 12px;
+  border-radius: 8px;
+}
+.timer-warn {
+  color: var(--danger);
+  border-color: var(--danger);
+  animation: pulse 1s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
 /* Playing screen */
 .game-bar {
   display: flex; align-items: center; justify-content: space-between;
@@ -258,6 +275,37 @@ body {
 .result-banner .big { font-size: 3.5rem; margin-bottom: 12px; }
 .result-banner h2 { font-size: 1.6rem; font-weight: 900; margin-bottom: 6px; }
 .result-banner p { color: var(--muted); font-size: 0.88rem; margin-bottom: 22px; line-height: 1.7; white-space: pre-line; }
+
+/* Chat */
+.chat-card { display: flex; flex-direction: column; }
+.chat-list {
+  max-height: 180px; min-height: 80px;
+  overflow-y: auto; display: flex; flex-direction: column; gap: 6px;
+  margin-bottom: 10px;
+}
+.chat-list::-webkit-scrollbar { width: 4px; }
+.chat-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.chat-msg {
+  display: flex; gap: 6px; align-items: flex-start;
+  font-size: 0.84rem; line-height: 1.4;
+}
+.chat-msg.me { flex-direction: row-reverse; text-align: right; }
+.chat-label {
+  font-size: 0.7rem; font-weight: 700;
+  padding: 2px 6px; border-radius: 6px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.chat-msg.me .chat-label { background: rgba(59,130,246,0.15); color: var(--primary); }
+.chat-msg.opp .chat-label { background: rgba(148,163,184,0.1); color: var(--muted); }
+.chat-text {
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 6px 10px; border-radius: 10px;
+  word-break: break-word; max-width: 75%;
+}
+.chat-msg.me .chat-text { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.2); }
+.chat-input-row { display: flex; gap: 8px; align-items: center; }
+.chat-input-row .input { flex: 1; padding: 8px 12px; font-size: 0.85rem; }
+.chat-input-row .btn { width: auto; }
 
 /* Layout helpers */
 .screen { display: flex; flex-direction: column; flex: 1; gap: 12px; }

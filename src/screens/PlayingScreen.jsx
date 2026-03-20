@@ -2,15 +2,20 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { db } from '../firebase'
 import { ref, set, push, update, onValue, onChildAdded, onChildChanged } from 'firebase/database'
 import { calcResult, validateNum } from '../utils'
+import Chat from '../components/Chat'
+
+const TURN_TIME = 60
 
 export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
   const [isMyTurn, setIsMyTurn] = useState(myRole === 'p1')
+  const [waitingResult, setWaitingResult] = useState(false)
   const [myGuesses, setMyGuesses] = useState([])
   const [oppGuesses, setOppGuesses] = useState([])
   const [guessInput, setGuessInput] = useState('')
   const [guessError, setGuessError] = useState(false)
   const [activeTab, setActiveTab] = useState('my')
   const [gameOver, setGameOver] = useState(false)
+  const [timer, setTimer] = useState(TURN_TIME)
 
   const gameOverRef = useRef(false)
   const myGuessesRef = useRef([])
@@ -18,15 +23,43 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
   const guessInputRef = useRef(null)
   const myGuessListRef = useRef(null)
   const oppGuessListRef = useRef(null)
+  const waitingResultRef = useRef(false)
+  const timerRef = useRef(null)
 
   const opp = myRole === 'p1' ? 'p2' : 'p1'
 
-  // Scroll guess list to bottom
   const scrollToBottom = useCallback((listRef) => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight
     }
   }, [])
+
+  // Timer logic
+  useEffect(() => {
+    if (gameOver) {
+      clearInterval(timerRef.current)
+      return
+    }
+
+    setTimer(TURN_TIME)
+    clearInterval(timerRef.current)
+
+    timerRef.current = setInterval(() => {
+      setTimer(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current)
+          // Time's up - skip turn if it's mine and not waiting for result
+          if (isMyTurn && !waitingResultRef.current && !gameOverRef.current) {
+            set(ref(db, `rooms/${roomId}/turn`), opp)
+          }
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timerRef.current)
+  }, [isMyTurn, gameOver, roomId, opp])
 
   useEffect(() => {
     const unsubs = []
@@ -38,6 +71,8 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       if (!t) return
       const mine = t === myRole
       setIsMyTurn(mine)
+      setWaitingResult(false)
+      waitingResultRef.current = false
       if (mine && !gameOverRef.current && guessInputRef.current) {
         setTimeout(() => guessInputRef.current?.focus(), 50)
       }
@@ -66,7 +101,7 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       }
     }))
 
-    // My guesses - child_changed (result filled in)
+    // My guesses - child_changed (result filled in by opponent)
     unsubs.push(onChildChanged(myGuessRef, (snap) => {
       const g = snap.val()
       const idx = myGuessesRef.current.findIndex(e => e.key === snap.key)
@@ -80,12 +115,13 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       myGuessesRef.current = [...myGuessesRef.current]
       setMyGuesses([...myGuessesRef.current])
 
-      // Result arrived - check win or give turn back
+      // Result arrived → check win or pass turn to opponent
       if (g.strike != null) {
         if (g.strike === 3) {
           set(ref(db, `rooms/${roomId}/winner`), myRole)
         } else {
-          set(ref(db, `rooms/${roomId}/turn`), myRole)
+          // Pass turn to opponent
+          set(ref(db, `rooms/${roomId}/turn`), opp)
         }
       }
     }))
@@ -122,7 +158,7 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
   }, [roomId, myRole, myNumber, opp, onGameEnd, scrollToBottom])
 
   const doGuess = () => {
-    if (!isMyTurn || gameOver) return
+    if (!isMyTurn || waitingResult || gameOver) return
 
     const val = guessInput.trim()
     const err = validateNum(val)
@@ -133,12 +169,10 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
     }
 
     setGuessInput('')
-    setIsMyTurn(false)
+    setWaitingResult(true)
+    waitingResultRef.current = true
 
-    // Set turn to opponent
-    set(ref(db, `rooms/${roomId}/turn`), opp)
-
-    // Push guess
+    // Push guess — don't switch turn yet, wait for result
     push(ref(db, `rooms/${roomId}/guesses/${myRole}`), {
       guess: val,
       strike: null,
@@ -170,11 +204,17 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
     )
   }
 
+  const timerWarning = timer <= 10
+  const canInput = isMyTurn && !waitingResult && !gameOver
+
   return (
     <div className="screen">
       <div className="game-bar">
         <div className={`turn-badge ${isMyTurn ? 'mine' : 'theirs'}`}>
-          {isMyTurn ? '내 차례' : '상대방 차례'}
+          {waitingResult ? '결과 대기중...' : isMyTurn ? '내 차례' : '상대방 차례'}
+        </div>
+        <div className={`timer ${timerWarning ? 'timer-warn' : ''}`}>
+          {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, '0')}
         </div>
         <div className="my-num-chip">
           내 숫자: <span>{myNumber}</span>
@@ -216,13 +256,13 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
               autoComplete="off"
               value={guessInput}
               onChange={(e) => setGuessInput(e.target.value.replace(/\D/g, ''))}
-              onKeyDown={(e) => e.key === 'Enter' && doGuess()}
-              disabled={!isMyTurn || gameOver}
+              onKeyDown={(e) => e.key === 'Enter' && !e.nativeEvent.isComposing && doGuess()}
+              disabled={!canInput}
             />
             <button
               className="btn btn-primary"
               onClick={doGuess}
-              disabled={!isMyTurn || gameOver}
+              disabled={!canInput}
             >
               추측
             </button>
@@ -241,6 +281,8 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
           </div>
         </div>
       )}
+
+      <Chat roomId={roomId} myRole={myRole} />
     </div>
   )
 }

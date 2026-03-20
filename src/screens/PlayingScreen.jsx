@@ -261,18 +261,18 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
             value={guessInput}
             onKeyDown={(e) => {
               if (!canInput) return
-              if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+              e.preventDefault()
+              if (e.key === 'Enter' || e.code === 'Enter') {
                 doGuess()
                 return
               }
-              if (e.key === 'Backspace') {
-                e.preventDefault()
+              if (e.key === 'Backspace' || e.code === 'Backspace') {
                 setGuessInput(prev => prev.slice(0, -1))
                 return
               }
-              if (/^[0-9]$/.test(e.key)) {
-                e.preventDefault()
-                setGuessInput(prev => (prev.length < 3 ? prev + e.key : prev))
+              const digitMatch = e.code.match(/^(?:Digit|Numpad)(\d)$/)
+              if (digitMatch) {
+                setGuessInput(prev => (prev.length < 3 ? prev + digitMatch[1] : prev))
               }
             }}
             disabled={!canInput}

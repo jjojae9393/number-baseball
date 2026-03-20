@@ -89,18 +89,19 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
   }
 
   const handleNumKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+    e.preventDefault()
+    if (e.key === 'Enter' || e.code === 'Enter') {
       handleReady()
       return
     }
-    if (e.key === 'Backspace') {
-      e.preventDefault()
+    if (e.key === 'Backspace' || e.code === 'Backspace') {
       setNumInput(prev => prev.slice(0, -1))
       return
     }
-    if (/^[0-9]$/.test(e.key)) {
-      e.preventDefault()
-      setNumInput(prev => (prev.length < 3 ? prev + e.key : prev))
+    // e.code: "Digit0"~"Digit9" or "Numpad0"~"Numpad9"
+    const digitMatch = e.code.match(/^(?:Digit|Numpad)(\d)$/)
+    if (digitMatch) {
+      setNumInput(prev => (prev.length < 3 ? prev + digitMatch[1] : prev))
     }
   }
 

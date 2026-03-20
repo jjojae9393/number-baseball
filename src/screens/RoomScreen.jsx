@@ -89,7 +89,8 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
   }
 
   const handleNumChange = (e) => {
-    setNumInput(e.target.value.replace(/\D/g, ''))
+    const val = e.target.value.replace(/[^0-9]/g, '')
+    setNumInput(val.slice(0, 3))
   }
 
   return (
@@ -124,10 +125,9 @@ export default function RoomScreen({ roomId, myRole, roomName, onGameStart, onLe
             <input
               ref={numInputRef}
               className="input input-mono"
-              type="text"
+              type="tel"
               placeholder="000"
               maxLength={3}
-              inputMode="numeric"
               autoComplete="off"
               value={numInput}
               onChange={handleNumChange}

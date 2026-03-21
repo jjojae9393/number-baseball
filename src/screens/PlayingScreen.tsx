@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
 import { db } from '../firebase'
 import { ref, set, push, update, onValue, onChildAdded, onChildChanged } from 'firebase/database'
 import { calcResult, validateNum } from '../utils'
@@ -6,28 +6,42 @@ import Chat from '../components/Chat'
 
 const TURN_TIME = 60
 
-export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
+interface GuessEntry {
+  key: string
+  guess: string
+  strike: number | null
+  ball: number | null
+  pending?: boolean
+}
+
+interface PlayingScreenProps {
+  roomId: string
+  myRole: string
+  myNumber: string
+  onGameEnd: (winner: string, guessCount: number) => void
+}
+
+export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }: PlayingScreenProps) {
   const [isMyTurn, setIsMyTurn] = useState(myRole === 'p1')
   const [waitingResult, setWaitingResult] = useState(false)
-  const [myGuesses, setMyGuesses] = useState([])
-  const [oppGuesses, setOppGuesses] = useState([])
+  const [myGuesses, setMyGuesses] = useState<GuessEntry[]>([])
+  const [oppGuesses, setOppGuesses] = useState<GuessEntry[]>([])
   const [guessInput, setGuessInput] = useState('')
   const [guessError, setGuessError] = useState(false)
   const [gameOver, setGameOver] = useState(false)
   const [timer, setTimer] = useState(TURN_TIME)
 
   const gameOverRef = useRef(false)
-  const myGuessesRef = useRef([])
-  const oppGuessesRef = useRef([])
-  const guessInputRef = useRef(null)
-  const myGuessListRef = useRef(null)
-  const oppGuessListRef = useRef(null)
+  const myGuessesRef = useRef<GuessEntry[]>([])
+  const oppGuessesRef = useRef<GuessEntry[]>([])
+  const myGuessListRef = useRef<HTMLDivElement>(null)
+  const oppGuessListRef = useRef<HTMLDivElement>(null)
   const waitingResultRef = useRef(false)
-  const timerRef = useRef(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const opp = myRole === 'p1' ? 'p2' : 'p1'
 
-  const scrollToBottom = useCallback((listRef) => {
+  const scrollToBottom = useCallback((listRef: React.RefObject<HTMLDivElement | null>) => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight
     }
@@ -36,17 +50,17 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
   // Timer logic
   useEffect(() => {
     if (gameOver) {
-      clearInterval(timerRef.current)
+      if (timerRef.current) clearInterval(timerRef.current)
       return
     }
 
     setTimer(TURN_TIME)
-    clearInterval(timerRef.current)
+    if (timerRef.current) clearInterval(timerRef.current)
 
     timerRef.current = setInterval(() => {
       setTimer(prev => {
         if (prev <= 1) {
-          clearInterval(timerRef.current)
+          if (timerRef.current) clearInterval(timerRef.current)
           if (isMyTurn && !waitingResultRef.current && !gameOverRef.current) {
             set(ref(db, `rooms/${roomId}/turn`), opp)
           }
@@ -56,11 +70,11 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       })
     }, 1000)
 
-    return () => clearInterval(timerRef.current)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [isMyTurn, gameOver, roomId, opp])
 
   useEffect(() => {
-    const unsubs = []
+    const unsubs: (() => void)[] = []
 
     const turnRef = ref(db, `rooms/${roomId}/turn`)
     unsubs.push(onValue(turnRef, (snap) => {
@@ -70,9 +84,6 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       setIsMyTurn(mine)
       setWaitingResult(false)
       waitingResultRef.current = false
-      if (mine && !gameOverRef.current && guessInputRef.current) {
-        setTimeout(() => guessInputRef.current?.focus(), 50)
-      }
     }))
 
     const winnerRef = ref(db, `rooms/${roomId}/winner`)
@@ -85,11 +96,21 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       }
     }))
 
+    // Detect opponent disconnect during game
+    const oppRef = ref(db, `rooms/${roomId}/${opp}`)
+    unsubs.push(onValue(oppRef, (snap) => {
+      if (!snap.exists() && !gameOverRef.current) {
+        gameOverRef.current = true
+        setGameOver(true)
+        onGameEnd(myRole, myGuessesRef.current.length)
+      }
+    }))
+
     const myGuessRef = ref(db, `rooms/${roomId}/guesses/${myRole}`)
     unsubs.push(onChildAdded(myGuessRef, (snap) => {
       const g = snap.val()
       if (!myGuessesRef.current.find(e => e.key === snap.key)) {
-        const entry = { key: snap.key, guess: g.guess, strike: g.strike, ball: g.ball, pending: g.strike == null }
+        const entry: GuessEntry = { key: snap.key!, guess: g.guess, strike: g.strike, ball: g.ball, pending: g.strike == null }
         myGuessesRef.current = [...myGuessesRef.current, entry]
         setMyGuesses([...myGuessesRef.current])
         setTimeout(() => scrollToBottom(myGuessListRef), 50)
@@ -99,7 +120,7 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
     unsubs.push(onChildChanged(myGuessRef, (snap) => {
       const g = snap.val()
       const idx = myGuessesRef.current.findIndex(e => e.key === snap.key)
-      const entry = { key: snap.key, guess: g.guess, strike: g.strike, ball: g.ball, pending: g.strike == null }
+      const entry: GuessEntry = { key: snap.key!, guess: g.guess, strike: g.strike, ball: g.ball, pending: g.strike == null }
 
       if (idx !== -1) {
         myGuessesRef.current[idx] = entry
@@ -126,7 +147,7 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
         update(snap.ref, { strike, ball })
 
         if (!oppGuessesRef.current.find(e => e.key === snap.key)) {
-          const entry = { key: snap.key, guess: g.guess, strike, ball }
+          const entry: GuessEntry = { key: snap.key!, guess: g.guess, strike, ball }
           oppGuessesRef.current = [...oppGuessesRef.current, entry]
           setOppGuesses([...oppGuessesRef.current])
           setTimeout(() => scrollToBottom(oppGuessListRef), 50)
@@ -137,7 +158,7 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
         }
       } else {
         if (!oppGuessesRef.current.find(e => e.key === snap.key)) {
-          const entry = { key: snap.key, guess: g.guess, strike: g.strike, ball: g.ball }
+          const entry: GuessEntry = { key: snap.key!, guess: g.guess, strike: g.strike, ball: g.ball }
           oppGuessesRef.current = [...oppGuessesRef.current, entry]
           setOppGuesses([...oppGuessesRef.current])
           setTimeout(() => scrollToBottom(oppGuessListRef), 50)
@@ -170,7 +191,7 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
     })
   }
 
-  const renderResult = (g) => {
+  const renderResult = (g: GuessEntry): ReactNode => {
     if (g.pending || g.strike == null) {
       return <span className="g-pending">...</span>
     } else if (g.strike === 0 && g.ball === 0) {
@@ -179,7 +200,7 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       return (
         <>
           {g.strike > 0 && <span className="g-s">{g.strike}S</span>}
-          {g.ball > 0 && <span className="g-b">{g.ball}B</span>}
+          {(g.ball ?? 0) > 0 && <span className="g-b">{g.ball}B</span>}
         </>
       )
     }
@@ -252,36 +273,25 @@ export default function PlayingScreen({ roomId, myRole, myNumber, onGameEnd }) {
       <div className="card">
         <div className="guess-input-row">
           <input
-            ref={guessInputRef}
             className={`input${guessError ? ' error' : ''}`}
             type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             placeholder="???"
             autoComplete="off"
-            readOnly
+            maxLength={3}
             value={guessInput}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, '').slice(0, 3)
+              setGuessInput(digits)
+            }}
             onKeyDown={(e) => {
               if (!canInput) return
-              e.preventDefault()
-              if (e.key === 'Enter' || e.code === 'Enter') {
-                doGuess()
-                return
-              }
-              if (e.key === 'Backspace' || e.code === 'Backspace') {
-                setGuessInput(prev => prev.slice(0, -1))
-                return
-              }
-              const digitMatch = e.code.match(/^(?:Digit|Numpad)(\d)$/)
-              if (digitMatch) {
-                setGuessInput(prev => (prev.length < 3 ? prev + digitMatch[1] : prev))
-              }
+              if (e.key === 'Enter' && !e.nativeEvent.isComposing) doGuess()
             }}
             disabled={!canInput}
           />
-          <button
-            className="btn btn-primary"
-            onClick={doGuess}
-            disabled={!canInput}
-          >
+          <button className="btn btn-primary" onClick={doGuess} disabled={!canInput}>
             추측
           </button>
         </div>

@@ -1,6 +1,16 @@
 import Chat from '../components/Chat'
 
-export default function EndedScreen({ roomId, winner, myRole, myNumber, myGuessCount, onBackToRoom, onLeave }) {
+interface EndedScreenProps {
+  roomId: string
+  winner: string
+  myRole: string
+  myNumber: string
+  myGuessCount: number
+  onBackToRoom: () => void
+  onLeave: () => void
+}
+
+export default function EndedScreen({ roomId, winner, myRole, myNumber, myGuessCount, onBackToRoom, onLeave }: EndedScreenProps) {
   const won = winner === myRole
 
   return (

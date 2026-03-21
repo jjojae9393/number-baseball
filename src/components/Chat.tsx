@@ -2,19 +2,35 @@ import { useState, useEffect, useRef } from 'react'
 import { db } from '../firebase'
 import { ref, push, onChildAdded, serverTimestamp } from 'firebase/database'
 
-export default function Chat({ roomId, myRole }) {
-  const [messages, setMessages] = useState([])
+interface ChatMessage {
+  key: string
+  sender: string
+  text: string
+  ts?: number
+}
+
+interface ChatProps {
+  roomId: string
+  myRole: string
+  systemMsgs?: ChatMessage[]
+}
+
+export default function Chat({ roomId, myRole, systemMsgs = [] }: ChatProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
-  const listRef = useRef(null)
-  const messagesRef = useRef([])
+  const listRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<ChatMessage[]>([])
 
   useEffect(() => {
     messagesRef.current = []
     setMessages([])
+    const joinedAt = Date.now()
 
     const chatRef = ref(db, `rooms/${roomId}/chat`)
     const unsub = onChildAdded(chatRef, (snap) => {
       const msg = snap.val()
+      // Only show messages after join time
+      if (msg.ts && msg.ts < joinedAt) return
       if (!messagesRef.current.find(m => m.key === snap.key)) {
         messagesRef.current = [...messagesRef.current, { key: snap.key, ...msg }]
         setMessages([...messagesRef.current])
@@ -26,6 +42,13 @@ export default function Chat({ roomId, myRole }) {
 
     return () => unsub()
   }, [roomId])
+
+  // Scroll when system messages arrive
+  useEffect(() => {
+    if (systemMsgs.length > 0 && listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight
+    }
+  }, [systemMsgs.length])
 
   const send = () => {
     const text = input.trim()
@@ -42,10 +65,17 @@ export default function Chat({ roomId, myRole }) {
     <div className="card chat-card">
       <div className="card-title">채팅</div>
       <div className="chat-list" ref={listRef}>
-        {messages.length === 0 ? (
+        {messages.length === 0 && systemMsgs.length === 0 ? (
           <div className="empty-hint">메시지가 없습니다</div>
         ) : (
-          messages.map((msg) => {
+          [...messages, ...systemMsgs].sort((a, b) => (a.ts || 0) - (b.ts || 0)).map((msg) => {
+            if (msg.sender === 'system') {
+              return (
+                <div key={msg.key} className="chat-msg system">
+                  <span className="chat-system">{msg.text}</span>
+                </div>
+              )
+            }
             const isMe = msg.sender === myRole
             return (
               <div key={msg.key} className={`chat-msg ${isMe ? 'me' : 'opp'}`}>

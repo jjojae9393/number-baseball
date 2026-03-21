@@ -1,24 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366f1"/>
-      <stop offset="100%" stop-color="#3b82f6"/>
+      <stop offset="0%" stop-color="#3a9a5c"/>
+      <stop offset="100%" stop-color="#2d7a48"/>
     </linearGradient>
   </defs>
-  <!-- Rounded square background -->
+  <!-- Green rounded square -->
   <rect width="64" height="64" rx="14" fill="url(#bg)"/>
-  <!-- Game controller body -->
-  <path d="M14 30c0-4 3-7 7-7h22c4 0 7 3 7 7v4c0 6-3 11-8 13l-2 1c-2 0-4-1-4-3h-8c0 2-2 3-4 3l-2-1c-5-2-8-7-8-13v-4z" fill="#fff" opacity="0.95"/>
-  <!-- D-pad -->
-  <rect x="19" y="28" width="4" height="12" rx="1" fill="#6366f1"/>
-  <rect x="15" y="32" width="12" height="4" rx="1" fill="#6366f1"/>
-  <!-- Action buttons -->
-  <circle cx="42" cy="30" r="2.5" fill="#ef4444"/>
-  <circle cx="48" cy="30" r="2.5" fill="#3b82f6"/>
-  <circle cx="45" cy="26" r="2.5" fill="#22c55e"/>
-  <circle cx="45" cy="34" r="2.5" fill="#f59e0b"/>
-  <!-- Stars decoration -->
-  <polygon points="10,14 11.5,11 13,14 10,12 13,12" fill="#fbbf24" opacity="0.9"/>
-  <polygon points="51,11 52.2,8.5 53.4,11 51,9.5 53.4,9.5" fill="#fbbf24" opacity="0.7"/>
-  <polygon points="54,18 55,16 56,18 54,17 56,17" fill="#fbbf24" opacity="0.5"/>
+  <!-- Baseball -->
+  <circle cx="32" cy="32" r="20" fill="#f5f0e1" stroke="#c4a265" stroke-width="2"/>
+  <!-- Stitching left -->
+  <path d="M22 16c-2 4-3 9-3 16s1 12 3 16" fill="none" stroke="#d63031" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Stitching right -->
+  <path d="M42 16c2 4 3 9 3 16s-1 12-3 16" fill="none" stroke="#d63031" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Stitch marks left -->
+  <line x1="19" y1="20" x2="22" y2="21" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="18" y1="25" x2="21" y2="25.5" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="18" y1="30" x2="21" y2="30" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="18" y1="35" x2="21" y2="34.5" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="19" y1="40" x2="22" y2="39" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="20" y1="44" x2="23" y2="43" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Stitch marks right -->
+  <line x1="45" y1="20" x2="42" y2="21" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="46" y1="25" x2="43" y2="25.5" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="46" y1="30" x2="43" y2="30" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="46" y1="35" x2="43" y2="34.5" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="45" y1="40" x2="42" y2="39" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="44" y1="44" x2="41" y2="43" stroke="#d63031" stroke-width="1.5" stroke-linecap="round"/>
 </svg>

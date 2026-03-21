@@ -139,7 +139,7 @@ export default function LobbyScreen({ onJoinRoom }: LobbyScreenProps) {
                 <span className="g-b">B (볼)</span> — 숫자는 맞지만 위치가 다름<br />
                 <span style={{color: 'var(--muted)'}}>OUT</span> — 맞는 숫자가 하나도 없음
               </p>
-              <p><strong>4. 승리 조건</strong><br />먼저 3S(3스트라이크)를 달성하면 승리!</p>
+              <p><strong>4. 승리 조건</strong><br />먼저 <span className="g-s">3S(3스트라이크)</span>를 달성하면 승리!</p>
             </div>
             <button className="btn btn-primary" onClick={() => setShowHelp(false)}>확인</button>
           </div>
